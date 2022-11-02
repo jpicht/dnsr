@@ -29,22 +29,43 @@ var (
 	ErrTimeout      = fmt.Errorf("timeout expired") // TODO: Timeouter interface? e.g. func (e) Timeout() bool { return true }
 )
 
+type cacheInterface interface {
+	add(qname string, rr RR)
+	addNX(qname string)
+	get(qname string) RRs
+}
+
 // Resolver implements a primitive, non-recursive, caching DNS resolver.
 type Resolver struct {
-	cache   *cache
+	cache   cacheInterface
 	expire  bool
 	timeout time.Duration
 }
 
 // New initializes a Resolver with the specified cache size.
 func New(capacity int) *Resolver {
-	return NewWithTimeout(capacity, Timeout)
+	return newWithTimeout(newCache(capacity, false), Timeout)
+}
+
+// New initializes a Resolver with the specified cache size.
+func NewNoCache() *Resolver {
+	return newWithTimeout(&NoCache{}, Timeout)
+}
+
+// New initializes a Resolver with the specified cache size.
+func NewNoCacheWithTimeout(timeout time.Duration) *Resolver {
+	return newWithTimeout(&NoCache{}, timeout)
 }
 
 // NewWithTimeout initializes a Resolver with the specified cache size and resolution timeout.
 func NewWithTimeout(capacity int, timeout time.Duration) *Resolver {
+	return newWithTimeout(newCache(capacity, false), timeout)
+}
+
+// newWithTimeout initializes a Resolver with the specified cache size and resolution timeout.
+func newWithTimeout(c cacheInterface, timeout time.Duration) *Resolver {
 	r := &Resolver{
-		cache:   newCache(capacity, false),
+		cache:   c,
 		expire:  false,
 		timeout: timeout,
 	}
