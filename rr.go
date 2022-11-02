@@ -15,6 +15,7 @@ type RR struct {
 	Value  string
 	TTL    time.Duration
 	Expiry time.Time
+	Raw    dns.RR
 }
 
 // RRs represents a slice of DNS resource records.
@@ -60,21 +61,21 @@ func convertRR(drr dns.RR, expire bool) (RR, bool) {
 	}
 	switch t := drr.(type) {
 	case *dns.SOA:
-		return RR{toLowerFQDN(t.Hdr.Name), "SOA", toLowerFQDN(t.Ns), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "SOA", toLowerFQDN(t.Ns), ttl, expiry, drr}, true
 	case *dns.NS:
-		return RR{toLowerFQDN(t.Hdr.Name), "NS", toLowerFQDN(t.Ns), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "NS", toLowerFQDN(t.Ns), ttl, expiry, drr}, true
 	case *dns.CNAME:
-		return RR{toLowerFQDN(t.Hdr.Name), "CNAME", toLowerFQDN(t.Target), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "CNAME", toLowerFQDN(t.Target), ttl, expiry, drr}, true
 	case *dns.A:
-		return RR{toLowerFQDN(t.Hdr.Name), "A", t.A.String(), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "A", t.A.String(), ttl, expiry, drr}, true
 	case *dns.AAAA:
-		return RR{toLowerFQDN(t.Hdr.Name), "AAAA", t.AAAA.String(), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "AAAA", t.AAAA.String(), ttl, expiry, drr}, true
 	case *dns.TXT:
-		return RR{toLowerFQDN(t.Hdr.Name), "TXT", strings.Join(t.Txt, "\t"), ttl, expiry}, true
+		return RR{toLowerFQDN(t.Hdr.Name), "TXT", strings.Join(t.Txt, "\t"), ttl, expiry, drr}, true
 	default:
 		fields := strings.Fields(drr.String())
 		if len(fields) >= 4 {
-			return RR{toLowerFQDN(fields[0]), fields[3], strings.Join(fields[4:], "\t"), ttl, expiry}, true
+			return RR{toLowerFQDN(fields[0]), fields[3], strings.Join(fields[4:], "\t"), ttl, expiry, drr}, true
 		}
 	}
 	return RR{}, false
