@@ -141,12 +141,13 @@ func (r *Resolver) resolve(ctx context.Context, qname, qtype string, depth int) 
 	return rrs, err
 }
 
-func (r *Resolver) iterateParents(ctx context.Context, qname, qtype string, depth int) (RRs, error) {
+func (r *Resolver) iterateParents(outerCtx context.Context, qname, qtype string, depth int) (RRs, error) {
 	chanRRs := make(chan RRs, MaxNameservers)
 	chanErrs := make(chan error, MaxNameservers)
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(outerCtx)
 	defer cancel()
 	for pname, ok := qname, true; ok; pname, ok = parent(pname) {
+		log.Println("iterateParents", pname, qname, qtype)
 		// If we’re looking for [foo.com,NS], then move on to the parent ([com,NS])
 		if pname == qname && qtype == "NS" {
 			continue
@@ -210,7 +211,7 @@ func (r *Resolver) iterateParents(ctx context.Context, qname, qtype string, dept
 					}
 				}
 				cancel() // stop any other work here before recursing
-				return r.resolveCNAMEs(ctx, qname, qtype, rrs, depth)
+				return r.resolveCNAMEs(outerCtx, qname, qtype, rrs, depth)
 			case err = <-chanErrs:
 				if err == NXDOMAIN {
 					return nil, err
